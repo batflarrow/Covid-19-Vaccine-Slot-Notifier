@@ -110,5 +110,74 @@ let getVaccineStatus = (districtCode, ageGroup, howMuchData) => __awaiter(void 0
         console.log(err);
     }
 });
-export { getVaccineStatus };
+let getVaccineStatusByPincode = (pincode, ageGroup) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        let min_age_limit;
+        if (ageGroup === "18-45") {
+            min_age_limit = 18;
+        }
+        else if (ageGroup === "45+") {
+            min_age_limit = 45;
+        }
+        for (let i = 0; i < 3; i++) {
+            var dates = new Date();
+            dates.setDate(new Date().getDate() + i);
+            var dd = String(dates.getDate()).padStart(2, "0");
+            var mm = String(dates.getMonth() + 1).padStart(2, "0"); //January is 0!
+            var yyyy = dates.getFullYear();
+            const date = dd + "-" + mm + "-" + yyyy;
+            const response = yield axios.get("https://www.cowin.gov.in/api/v2/appointment/sessions/public/findByPin", {
+                params: {
+                    pincode: pincode,
+                    date: date,
+                },
+            });
+            // console.log(response);
+            const sessions = response.data.sessions;
+            // console.log(sessions)
+            if (sessions.length > 0) {
+                // console.log("*******", sessions);
+                const availableSessions = sessions.filter((session) => {
+                    return (session.min_age_limit === min_age_limit &&
+                        session.available_capacity > 0);
+                });
+                yield beeper("*-*-*");
+                console.log(chalk.bgGreenBright.blue(`For Date=${date} Congratulation Slots are available for vaccine In the folowing Centers`));
+                const numberOfAvailableSessions = availableSessions.length;
+                if (numberOfAvailableSessions == 0) {
+                    console.log(chalk.bgRed(`For Date ${date} No Slots Available :( Slots will be shown here when they will be available`));
+                }
+                else {
+                    // console.log(numberOfAvailableCenters);
+                    availableSessions.forEach((availableSession, index) => {
+                        console.log(chalk.cyanBright.bold("Center Name :", availableSession.name));
+                        console.log(chalk.cyanBright.bold("Address :", availableSession.address));
+                        console.log(chalk.cyanBright.bold("State :", availableSession.state_name));
+                        console.log(chalk.cyanBright.bold("District :", availableSession.district_name));
+                        console.log(chalk.cyanBright.bold("Block Name: ", availableSession.block_name));
+                        console.log(chalk.cyanBright.bold("Pincode: ", availableSession.pincode));
+                        console.log(chalk.cyanBright.bold("Time Period for which center is working: " +
+                            availableSession.from +
+                            " To " +
+                            availableSession.to));
+                        console.log(chalk.cyanBright.bold("Fees :" + availableSession.fee_type));
+                        console.log(chalk.yellowBright("Date: " + availableSession.date));
+                        console.log(chalk.yellowBright("available_capacity: " + availableSession.available_capacity));
+                        console.log(chalk.yellowBright("Vaccine used at this center: " + availableSession.vaccine));
+                        console.log(chalk.yellowBright("Age Group: " + ageGroup));
+                        console.log(chalk.yellowBright("Slots: " + availableSession.slots));
+                    });
+                }
+            }
+            else {
+                console.log(chalk.bgRed(` For Date=${date} No Slots Available :( Slots will be shown here when they will be available`));
+            }
+        }
+    }
+    catch (err) {
+        console.log("Error In getVaccineStatus in vaccine.js");
+        console.log(err);
+    }
+});
+export { getVaccineStatus, getVaccineStatusByPincode };
 //# sourceMappingURL=vaccine.js.map

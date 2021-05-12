@@ -1,11 +1,23 @@
 import prompts from "prompts";
 import { getStateCodes, getStateCode } from "./state.js";
 import { getDistrictCodes, getDistrictCode } from "./district.js";
-import { getVaccineStatus } from "./vaccine.js";
-
+import { getVaccineStatus, getVaccineStatusByPincode } from "./vaccine.js";
+import pincodeDirectory from "india-pincode-lookup";
 let stateCodes;
 let districtCodes;
 let response;
+const question0 = {
+  type: "text",
+  name: "districtOrPin",
+  message:
+    "You want to search vaccine slots via pincode or via district (Enter Pincode or District)",
+  validate: (value) => {
+    return value.toUpperCase() === "PINCODE" ||
+      value.toUpperCase() === "DISTRICT"
+      ? true
+      : "Wrong Value Entered";
+  },
+};
 const question1 = {
   type: "text",
   name: "state",
@@ -39,29 +51,51 @@ const question4 = {
   validate: (value) =>
     value === "all" || value === "10" ? true : "Wrong Input",
 };
+
+const question5 = {
+  type: "text",
+  name: "pincode",
+  message: "Enter  Pincode",
+  validate: (value) => {
+    return pincodeDirectory.lookup(value).length > 0
+      ? true
+      : "Wrong Pincode Entered";
+  },
+};
 (async () => {
   try {
-    stateCodes = await getStateCodes();
-
-    response = await prompts(question1);
-    const stateCode = getStateCode(response.state, stateCodes);
-    districtCodes = await getDistrictCodes(stateCode);
-
-    response = await prompts(question2);
-    const districtCode = getDistrictCode(response.district, districtCodes);
-
+    response = await prompts(question0);
+    const districtOrPin = response.districtOrPin;
     response = await prompts(question3);
     const ageGroup = response.ageGroup;
 
-    response = await prompts(question4);
-    const howMuchData = response.howMuchData;
+    if (districtOrPin.toUpperCase() === "DISTRICT") {
+      response = await prompts(question4);
+      const howMuchData = response.howMuchData;
+      stateCodes = await getStateCodes();
+      response = await prompts(question1);
+      const stateCode = getStateCode(response.state, stateCodes);
+      districtCodes = await getDistrictCodes(stateCode);
 
-    await getVaccineStatus(districtCode, ageGroup, howMuchData);
-    console.log("Results will be fetched again after 30 sec");
-    setInterval(async () => {
+      response = await prompts(question2);
+      const districtCode = getDistrictCode(response.district, districtCodes);
+
       await getVaccineStatus(districtCode, ageGroup, howMuchData);
       console.log("Results will be fetched again after 30 secs");
-    }, 30000);
+      setInterval(async () => {
+        await getVaccineStatus(districtCode, ageGroup, howMuchData);
+        console.log("Results will be fetched again after 30 secs");
+      }, 30000);
+    } else if (districtOrPin.toUpperCase() === "PINCODE") {
+      response = await prompts(question5);
+      const pincode = response.pincode;
+      await getVaccineStatusByPincode(pincode, ageGroup);
+      console.log("Results will be fetched again after 30 secs");
+      setInterval(async () => {
+        await getVaccineStatusByPincode(pincode, ageGroup);
+        console.log("Results will be fetched again after 30 secs");
+      }, 30000);
+    }
   } catch (err) {
     console.log("Error in Index.js");
     console.log(err);
