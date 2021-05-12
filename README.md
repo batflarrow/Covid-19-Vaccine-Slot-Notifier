@@ -25,5 +25,4 @@ npm install
 npm start
 ```
 
-### Make sure you run the program in a normal terminal and not the integrate terminal inside ide's like the vscode Integrated Terminal
-### to listen the beeps in case of availablity of vaccine
+### Make sure you run the program in a normal terminal and not the integrate terminal inside ide's like the vscode Integrated Terminal to listen the beeps in case of availablity of vaccine
