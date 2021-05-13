@@ -187,13 +187,6 @@ let getVaccineStatusByPincode = async (pincode: number, ageGroup: string) => {
             session.available_capacity > 0
           );
         });
-
-        await beeper("*-*-*");
-        console.log(
-          chalk.bgGreenBright.blue(
-            `For Date=${date} Congratulation Slots are available for vaccine In the folowing Centers`
-          )
-        );
         const numberOfAvailableSessions = availableSessions.length;
         if (numberOfAvailableSessions == 0) {
           console.log(
@@ -202,6 +195,12 @@ let getVaccineStatusByPincode = async (pincode: number, ageGroup: string) => {
             )
           );
         } else {
+          await beeper("*-*-*");
+          console.log(
+            chalk.bgGreenBright.blue(
+              `For Date=${date} Congratulation Slots are available for vaccine In the folowing Centers`
+            )
+          );
           // console.log(numberOfAvailableCenters);
           availableSessions.forEach((availableSession, index) => {
             console.log(
