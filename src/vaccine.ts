@@ -25,7 +25,9 @@ let sortOnAvailableCapacity = (availableCenters) => {
 let getVaccineStatus = async (
   districtCode: number,
   ageGroup: string,
-  howMuchData: string
+  howMuchData: string,
+  dose: string,
+  fees: string
 ) => {
   try {
     let min_age_limit;
@@ -40,6 +42,7 @@ let getVaccineStatus = async (
     var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
     var yyyy = today.getFullYear();
     const date = dd + "-" + mm + "-" + yyyy;
+    console.log(date);
     const response = await axios.get(
       "https://www.cowin.gov.in/api/v2/appointment/sessions/public/calendarByDistrict",
       {
@@ -51,20 +54,114 @@ let getVaccineStatus = async (
     );
 
     const centers = response.data.centers;
+    let availableCenters = [];
+    switch (fees) {
+      case "free":
+        availableCenters = centers.filter((center) => {
+          if (center.sessions.length > 0 && center.fee_type === "Free") {
+            const availableSession = center.sessions.find((session) => {
+              switch (dose) {
+                case "dose1":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose1 > 0
+                  );
+                case "dose2":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose2 > 0
+                  );
 
-    const availableCenters = centers.filter((center) => {
-      if (center.sessions.length > 0) {
-        const availableSession = center.sessions.find((session) => {
-          return (
-            session.min_age_limit === min_age_limit &&
-            session.available_capacity > 0
-          );
+                default:
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    (session.available_capacity_dose2 > 0 ||
+                      session.available_capacity_dose1 > 0)
+                  );
+              }
+            });
+            if (!!availableSession) return true;
+            else return false;
+          } else {
+            return false;
+          }
         });
-        if (!!availableSession) return true;
-        else return false;
-      } else return false;
-    });
-    // console.log(availableCenter);
+        break;
+      case "paid":
+        availableCenters = centers.filter((center) => {
+          if (center.sessions.length > 0 && center.fee_type === "Paid") {
+            const availableSession = center.sessions.find((session) => {
+              switch (dose) {
+                case "dose1":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose1 > 0
+                  );
+                case "dose2":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    (session.available_capacity_dose2 > 0 ||
+                      session.available_capacity_dose1 > 0)
+                  );
+
+                default:
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    (session.available_capacity_dose2 > 0 ||
+                      session.available_capacity_dose1 > 0)
+                  );
+              }
+            });
+            if (!!availableSession) return true;
+            else return false;
+          } else {
+            return false;
+          }
+        });
+        break;
+      default:
+        availableCenters = centers.filter((center) => {
+          if (center.sessions.length > 0) {
+            const availableSession = center.sessions.find((session) => {
+              switch (dose) {
+                case "dose1":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose1 > 0
+                  );
+                case "dose2":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose2 > 0
+                  );
+
+                default:
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose2 > 0 &&
+                    session.available_capacity_dose1 > 0
+                  );
+              }
+            });
+            if (!!availableSession) return true;
+            else return false;
+          } else {
+            return false;
+          }
+        });
+        break;
+    }
+
+    // console.log(availableCenters);
 
     if (availableCenters.length > 0) {
       sortOnAvailableCapacity(availableCenters);
@@ -112,7 +209,12 @@ let getVaccineStatus = async (
             console.log(chalk.yellowBright("Date: " + session.date));
             console.log(
               chalk.yellowBright(
-                "available_capacity: " + session.available_capacity
+                "available_capacity_dose1: " + session.available_capacity_dose1
+              )
+            );
+            console.log(
+              chalk.yellowBright(
+                "available_capacity_dose2: " + session.available_capacity_dose2
               )
             );
             console.log(
@@ -151,7 +253,12 @@ let getVaccineStatus = async (
     console.log(err);
   }
 };
-let getVaccineStatusByPincode = async (pincode: number, ageGroup: string) => {
+let getVaccineStatusByPincode = async (
+  pincode: number,
+  ageGroup: string,
+  dose: string,
+  fees: string
+) => {
   try {
     let min_age_limit;
     if (ageGroup === "18-45") {
@@ -181,12 +288,101 @@ let getVaccineStatusByPincode = async (pincode: number, ageGroup: string) => {
       // console.log(sessions)
       if (sessions.length > 0) {
         // console.log("*******", sessions);
-        const availableSessions = sessions.filter((session) => {
-          return (
-            session.min_age_limit === min_age_limit &&
-            session.available_capacity > 0
-          );
-        });
+        // const availableSessions = sessions.filter((session) => {
+        //   return (
+        //     session.min_age_limit === min_age_limit &&
+        //     session.available_capacity > 0
+        //   );
+        // });
+        let availableSessions = [];
+        switch (fees) {
+          case "free":
+            availableSessions = sessions.filter((session) => {
+              if (session.fee_type === "Free") {
+                switch (dose) {
+                  case "dose1":
+                    return (
+                      session.min_age_limit === min_age_limit &&
+                      session.available_capacity > 0 &&
+                      session.available_capacity_dose1 > 0
+                    );
+                  case "dose2":
+                    return (
+                      session.min_age_limit === min_age_limit &&
+                      session.available_capacity > 0 &&
+                      session.available_capacity_dose2 > 0
+                    );
+
+                  default:
+                    return (
+                      session.min_age_limit === min_age_limit &&
+                      session.available_capacity > 0 &&
+                      (session.available_capacity_dose2 > 0 ||
+                        session.available_capacity_dose1 > 0)
+                    );
+                }
+              } else {
+                return false;
+              }
+            });
+            break;
+          case "paid":
+            availableSessions = sessions.filter((session) => {
+              if (session.fee_type === "Paid") {
+                switch (dose) {
+                  case "dose1":
+                    return (
+                      session.min_age_limit === min_age_limit &&
+                      session.available_capacity > 0 &&
+                      session.available_capacity_dose1 > 0
+                    );
+                  case "dose2":
+                    return (
+                      session.min_age_limit === min_age_limit &&
+                      session.available_capacity > 0 &&
+                      session.available_capacity_dose2 > 0
+                    );
+
+                  default:
+                    return (
+                      session.min_age_limit === min_age_limit &&
+                      session.available_capacity > 0 &&
+                      (session.available_capacity_dose2 > 0 ||
+                        session.available_capacity_dose1 > 0)
+                    );
+                }
+              } else {
+                return false;
+              }
+            });
+            break;
+          default:
+            availableSessions = sessions.filter((session) => {
+              switch (dose) {
+                case "dose1":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose1 > 0
+                  );
+                case "dose2":
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    session.available_capacity_dose2 > 0
+                  );
+
+                default:
+                  return (
+                    session.min_age_limit === min_age_limit &&
+                    session.available_capacity > 0 &&
+                    (session.available_capacity_dose2 > 0 ||
+                      session.available_capacity_dose1 > 0)
+                  );
+              }
+            });
+            break;
+        }
         const numberOfAvailableSessions = availableSessions.length;
         if (numberOfAvailableSessions == 0) {
           console.log(
@@ -238,7 +434,14 @@ let getVaccineStatusByPincode = async (pincode: number, ageGroup: string) => {
             console.log(chalk.yellowBright("Date: " + availableSession.date));
             console.log(
               chalk.yellowBright(
-                "available_capacity: " + availableSession.available_capacity
+                "available_capacity_dose1: " +
+                  availableSession.available_capacity_dose1
+              )
+            );
+            console.log(
+              chalk.yellowBright(
+                "available_capacity_dose2: " +
+                  availableSession.available_capacity_dose2
               )
             );
             console.log(
